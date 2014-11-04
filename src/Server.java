@@ -33,8 +33,10 @@ public class Server {
 
 	
     public static void main(String[] args) throws Exception {
-        HttpServer server = HttpServer.create(new InetSocketAddress(9000), 0);
+    	int portNum = 9000;
+        HttpServer server = HttpServer.create(new InetSocketAddress(portNum), 0);
         server.createContext("/dep", new MyHandler());
+        System.out.println(portNum);
         server.setExecutor(null); // creates a default executor
         server.start();
     }
@@ -48,14 +50,20 @@ public class Server {
         	if (queryString != null) {
 	        	Map <String, String> params = queryToMap(queryString);
 	        	String paragraph = params.get("paragraph");
+	        	paragraph = paragraph.replaceAll("\\+", " ");
+	        	System.out.println(paragraph);
 	        	int k = Integer.parseInt(params.get("k"));
+	        	
 
 	        	ArrayList <String []> sentenceList = stringToSentenceList(paragraph);	        	
 	        	ArrayList <String> ssList = new ArrayList<String>();
 	        	
 	        	for (String [] words : sentenceList) {
 		        	Dep [] deps = wordsToBestKDeps(words, k);
-		        	ssList.add(Arrays.toString(deps));
+		        	String local = "{";
+		        	local += "\"deps\": " + Arrays.toString(deps) + ", ";
+		        	local += "\"words\": " + Arrays.toString(attachQ(words)) + "}";
+		        	ssList.add(local);
 	        	}
 	        	response += ssList.toString();
         	}
@@ -68,6 +76,14 @@ public class Server {
             OutputStream os = t.getResponseBody();
             os.write(response.getBytes());
             os.close();
+        }
+        
+        public String [] attachQ(String [] words) {
+        	String [] out = new String [words.length];
+        	for (int i = 0; i < words.length; i ++) {
+        		out[i] = "\"" + words[i] + "\"";
+        	}
+        	return out;
         }
         
         public ArrayList<String []> stringToSentenceList(String paragraph) {

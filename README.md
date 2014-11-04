@@ -4,7 +4,7 @@ stanford-parser-server
 Simple server for stanford parser.
 
 Quick Start
-===========
+-----------
 
 0. Make sure you have JDK 8.
 1. Create lib and bin folders in the project folder.

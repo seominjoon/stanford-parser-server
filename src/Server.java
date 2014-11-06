@@ -32,50 +32,61 @@ public class Server {
     static LexicalizedParser lp = LexicalizedParser.loadModel(parserModel);
 
 	
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
     	int portNum = 9000;
-        HttpServer server = HttpServer.create(new InetSocketAddress(portNum), 0);
-        server.createContext("/dep", new MyHandler());
-        System.out.println(portNum);
-        server.setExecutor(null); // creates a default executor
-        server.start();
+    	try {
+	        HttpServer server = HttpServer.create(new InetSocketAddress(portNum), 0);
+	        server.createContext("/dep", new MyHandler());
+	        System.out.println(portNum);
+	        server.setExecutor(null); // creates a default executor
+	        server.start();
+    	}
+    	catch (Exception e) {
+    		System.out.println(e.getMessage());
+    	}
     }
 
     static class MyHandler implements HttpHandler {
         public void handle(HttpExchange t) throws IOException {
-        	String response = "";
-        	String queryString = t.getRequestURI().getQuery();
-
-        	// Do not run mapping if client did not send any data.
-        	if (queryString != null) {
-	        	Map <String, String> params = queryToMap(queryString);
-	        	String paragraph = params.get("paragraph");
-	        	paragraph = paragraph.replaceAll("\\+", " ");
-	        	System.out.println(paragraph);
-	        	int k = Integer.parseInt(params.get("k"));
-	        	
-
-	        	ArrayList <String []> sentenceList = stringToSentenceList(paragraph);	        	
-	        	ArrayList <String> ssList = new ArrayList<String>();
-	        	
-	        	for (String [] words : sentenceList) {
-		        	Dep [] deps = wordsToBestKDeps(words, k);
-		        	String local = "{";
-		        	local += "\"deps\": " + Arrays.toString(deps) + ", ";
-		        	local += "\"words\": " + Arrays.toString(attachQ(words)) + "}";
-		        	ssList.add(local);
+        	try {
+	        	String response = "";
+	        	String queryString = t.getRequestURI().getQuery();
+	
+	        	// Do not run mapping if client did not send any data.
+	        	if (queryString != null) {
+		        	Map <String, String> params = queryToMap(queryString);
+		        	String paragraph = params.get("paragraph");
+		        	paragraph = paragraph.replaceAll("\\+", " ");
+		        	System.out.println("paragraph: " + paragraph);
+		        	int k = Integer.parseInt(params.get("k"));
+		        	System.out.println("k: " + k);
+		        	
+	
+		        	ArrayList <String []> sentenceList = stringToSentenceList(paragraph);	        	
+		        	ArrayList <String> ssList = new ArrayList<String>();
+		        	
+		        	for (String [] words : sentenceList) {
+			        	Dep [] deps = wordsToBestKDeps(words, k);
+			        	String local = "{";
+			        	local += "\"deps\": " + Arrays.toString(deps) + ", ";
+			        	local += "\"words\": " + Arrays.toString(attachQ(words)) + "}";
+			        	ssList.add(local);
+		        	}
+		        	response += ssList.toString();
 	        	}
-	        	response += ssList.toString();
+	        	else {
+	        		response = "error";
+	        	}
+	        	
+	        	// Send back the response
+	            t.sendResponseHeaders(200, response.length());
+	            OutputStream os = t.getResponseBody();
+	            os.write(response.getBytes());
+	            os.close();
         	}
-        	else {
-        		response = "error";
+        	catch (Exception e) {
+        		e.printStackTrace();
         	}
-        	
-        	// Send back the response
-            t.sendResponseHeaders(200, response.length());
-            OutputStream os = t.getResponseBody();
-            os.write(response.getBytes());
-            os.close();
         }
         
         public String [] attachQ(String [] words) {
@@ -108,7 +119,7 @@ public class Server {
         	List <CoreLabel> rawWords = Sentence.toCoreLabelList(words);
         	LexicalizedParserQuery lpq = (LexicalizedParserQuery) lp.parserQuery();
         	lpq.parse(rawWords);
-            List<ScoredObject<Tree>> kBest = lpq.getKBestPCFGParses(10);
+            List<ScoredObject<Tree>> kBest = lpq.getKBestPCFGParses(k);
             
             for (int i = 0; i < k; i ++) {
             	ScoredObject<Tree> so = kBest.get(i);

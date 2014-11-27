@@ -5,6 +5,7 @@ import java.io.StringReader;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -56,12 +57,17 @@ public class Server {
 	        	if (queryString != null) {
 		        	Map <String, String> params = queryToMap(queryString);
 		        	String paragraph = params.get("paragraph");
+		        	String [] mywords = paragraph.split("\\+");
+		        	for (String word: mywords) System.out.println(word);
 		        	paragraph = paragraph.replaceAll("\\+", " ");
 		        	System.out.println("paragraph: " + paragraph);
 		        	int k = Integer.parseInt(params.get("k"));
 		        	System.out.println("k: " + k);
 		        	
-	
+
+		        	Dep [] deps = wordsToBestKDeps(mywords, k);
+		        	response = Arrays.toString(deps);
+		        	/*
 		        	ArrayList <String []> sentenceList = stringToSentenceList(paragraph);	        	
 		        	ArrayList <String> ssList = new ArrayList<String>();
 		        	
@@ -73,6 +79,7 @@ public class Server {
 			        	ssList.add(local);
 		        	}
 		        	response += ssList.toString();
+		        	*/
 	        	}
 	        	else {
 	        		response = "error";
@@ -128,14 +135,29 @@ public class Server {
                 TreebankLanguagePack tlp = lp.treebankLanguagePack();
                 GrammaticalStructureFactory gsf = tlp.grammaticalStructureFactory();
                 GrammaticalStructure gs = gsf.newGrammaticalStructure(parse);
+                Collection<TypedDependency> tdl = gs.typedDependencies();
+                String [][] tuples = new String [tdl.size()][3];
+
+                Iterator<TypedDependency>iter = tdl.iterator();
+                int j = 0;
+                while (iter.hasNext()) {
+                	TypedDependency td = iter.next();
+                	tuples[j][0] = "\"" + td.reln().toString() + "\"";
+                	tuples[j][1] = ""+td.gov().index();
+                	tuples[j][2] = ""+td.dep().index();
+                	j++;
+                }
+
+                /*
                 List<TypedDependency> tdl = gs.typedDependenciesCCprocessed();
                 String [][] tuples = new String [tdl.size()][3];
                 for (int j = 0; j < tdl.size(); j ++) {
-                	TypedDependency td = tdl.get(j);
+                	TypedDependency td = tdl.(j);
                 	tuples[j][0] = "\"" + td.reln().toString() + "\"";
                 	tuples[j][1] = ""+td.gov().index();
                 	tuples[j][2] = ""+td.dep().index();
                 }
+                */
                 deps[i] = new Dep(tuples, score);
             }
         	return deps;
